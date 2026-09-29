@@ -141,7 +141,7 @@
         <button onclick="selectType('all')">All Words (40)</button>
       </div>
       <div style="display:flex; gap:8px;">
-        <button class="btn-shuffle" onclick="shuffleActiveSet()" title="Shuffle words in current mode">🔀 Shuffle Order</button>
+        <button class="btn-shuffle" id="shuffle-btn" onclick="shuffleActiveSet()" title="Shuffle words in current mode">🔀 Shuffle Order</button>
       </div>
     </div>
     <div class="control-row" style="margin-top: 14px;">
@@ -335,10 +335,28 @@ function updateShuffleBadge(isShuffled) {
   setText(byId('shuffle-status'), isShuffled ? 'Order: shuffled' : 'Order: list order');
 }
 
+// Visible tap response. NOTE: never assign el.onclick here — the tabs carry their
+// action in the inline onclick attribute, and el.onclick = f would REPLACE it,
+// leaving a tab that pulses but does nothing.
+function pulse(el) {
+  if (!el) return;
+  removeClass(el, 'tapped');
+  void el.offsetWidth; // restart the animation
+  addClass(el, 'tapped');
+  setTimeout(function () { removeClass(el, 'tapped'); }, 450);
+}
+
+function pulseActive(groupId, activeIndex) {
+  var buttons = buttonList(groupId);
+  if (buttons.length) pulse(buttons[activeIndex]);
+}
+
 // ---------- modes & filters ----------
 function selectType(filterKey) {
   activeFilter = filterKey;
-  setGroupActive('filter-group', filterKey === 'verbs' ? 0 : (filterKey === 'adjectives' ? 1 : 2));
+  var target = filterKey === 'verbs' ? 0 : (filterKey === 'adjectives' ? 1 : 2);
+  setGroupActive('filter-group', target);
+  pulseActive('filter-group', target);
 
   displayList = filterList(activeFilter);
   if (currentMode === 'dictation' || currentMode === 'cloze') {
@@ -353,7 +371,9 @@ function selectType(filterKey) {
 
 function selectMode(modeKey) {
   currentMode = modeKey;
-  setGroupActive('mode-group', modeKey === 'flashcard' ? 0 : (modeKey === 'dictation' ? 1 : 2));
+  var target = modeKey === 'flashcard' ? 0 : (modeKey === 'dictation' ? 1 : 2);
+  setGroupActive('mode-group', target);
+  pulseActive('mode-group', target);
 
   byId('flashcard-view').style.display = modeKey === 'flashcard' ? 'block' : 'none';
   byId('dictation-view').style.display = modeKey === 'dictation' ? 'flex' : 'none';
@@ -369,6 +389,7 @@ function selectMode(modeKey) {
 }
 
 function shuffleActiveSet() {
+  pulse(byId('shuffle-btn'));
   displayList = shuffleCopy(displayList);
   currentIndex = 0;
   updateShuffleBadge(true);
@@ -557,25 +578,7 @@ document.onkeydown = function (e) {
   }
 };
 
-// ---------- tap feedback + keyboard-safe inputs ----------
-function bindTapFeedback() {
-  var ids = ['filter-group', 'mode-group'], i, j, buttons, btn;
-  for (i = 0; i < ids.length; i++) {
-    buttons = buttonList(ids[i]);
-    for (j = 0; j < buttons.length; j++) {
-      btn = buttons[j];
-      (function (el) {
-        el.onclick = function () {
-          removeClass(el, 'tapped');
-          void el.offsetWidth;
-          addClass(el, 'tapped');
-          setTimeout(function () { removeClass(el, 'tapped'); }, 450);
-        };
-      })(btn);
-    }
-  }
-}
-
+// ---------- keyboard-safe inputs ----------
 function bindFocusScroll() {
   var ids = ['dictation-input', 'cloze-input'], i, el;
   for (i = 0; i < ids.length; i++) {
@@ -595,7 +598,6 @@ function bindFocusScroll() {
 // ---------- start ----------
 (function init() {
   try {
-    bindTapFeedback();
     bindFocusScroll();
     displayList = filterList('verbs');
     refreshDisplay();
