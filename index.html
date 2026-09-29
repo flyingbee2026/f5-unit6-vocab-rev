@@ -112,6 +112,11 @@
       flex: 0 0 auto; touch-action: manipulation;
     }
     .order-status { font-size: 0.8rem; color: #64748b; font-weight: 600; pointer-events: none; white-space: nowrap; }
+    .js-error { display: none; }
+    .js-error.show, .noscript-note {
+      display: block; font-size: 0.9rem; color: #7f1d1d; background: #fef2f2; border: 1px solid #fecaca;
+      border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; line-height: 1.45; text-align: left;
+    }
     .speech-hint { font-size: 0.85rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a;
       border-radius: 8px; padding: 8px 10px; margin-top: 10px; text-align: center; display: none; }
     .speech-hint.show { display: block; }
@@ -124,6 +129,9 @@
     <h1>F5 Vocabulary Revision System</h1>
     <p class="subtitle">Unit 6: Communication &amp; Technology (Argumentative &amp; Proposal Writing)</p>
   </header>
+
+  <div id="js-error" class="js-error" role="alert"></div>
+  <noscript><div class="noscript-note">⚠️ This practice page needs JavaScript. Please open it in Chrome, Safari or Samsung Internet. If you are viewing it inside another app (e.g. Telegram), tap the ⋮ / ⋯ menu and choose “Open in browser”.</div></noscript>
 
   <div class="panel">
     <div class="control-row">
@@ -203,8 +211,8 @@
 </div>
 
 <script>
-// Audited Database of all 40 Items (25 Verbs + 15 Adjectives)
-const vocabDatabase = [
+// F5 Unit 6 Vocabulary revision page - ES5 build (runs on old Android WebViews too)
+var vocabDatabase = [
   // PART A: 25 FORMAL VERBS
   { word: "proliferate", pos: "(v)", type: "verb", blankWord: "proliferated", defEn: "to spread rapidly and in large numbers.", defZh: "激增 / 擴散", sentence: "Misinformation has proliferated on social media because anyone can post without verification." },
   { word: "exacerbate", pos: "(v)", type: "verb", blankWord: "exacerbate", defEn: "to make a bad situation, feeling or problem worse.", defZh: "惡化 / 加劇", sentence: "Constant phone notifications exacerbate students' difficulty in concentrating on their reading." },
@@ -250,36 +258,91 @@ const vocabDatabase = [
   { word: "feasible", pos: "(adj)", type: "adjective", blankWord: "feasible", defEn: "possible to do and likely to be successful.", defZh: "可行的", sentence: "Implementing a strict device policy is a feasible solution to minimize classroom distractions." }
 ];
 
-let activeFilter = 'verbs';
-let currentMode = 'flashcard';
-let displayList = [];
-let currentIndex = 0;
+var activeFilter = 'verbs';
+var currentMode = 'flashcard';
+var displayList = [];
+var currentIndex = 0;
+var pageReady = false;
 
+// ---------- tiny DOM helpers (ES5 only: no modern list APIs) ----------
+function byId(id) { return document.getElementById(id); }
+
+function hasClass(el, c) { return (' ' + (el && el.className ? el.className : '') + ' ').indexOf(' ' + c + ' ') !== -1; }
+
+function addClass(el, c) {
+  if (!el || hasClass(el, c)) return;
+  el.className = (el.className ? el.className + ' ' : '') + c;
+}
+
+function removeClass(el, c) {
+  if (!el) return;
+  var parts = (el.className || '').split(/\s+/), keep = [], i;
+  for (i = 0; i < parts.length; i++) { if (parts[i] && parts[i] !== c) keep.push(parts[i]); }
+  el.className = keep.join(' ');
+}
+
+function setText(el, text) { if (el) el.textContent = text; }
+
+function buttonList(groupId) {
+  var group = byId(groupId);
+  if (!group || !group.getElementsByTagName) return [];
+  var raw = group.getElementsByTagName('button'), out = [], i;
+  for (i = 0; i < raw.length; i++) out.push(raw[i]);
+  return out;
+}
+
+// ---------- error reporting: any script failure becomes visible on the page ----------
+function showPageError(message) {
+  var el = byId('js-error');
+  if (!el) return;
+  el.innerHTML = '⚠️ This page hit a problem on your device: ' + message +
+    '<br>Please send this message to Ms Chau. In the meantime you can still revise from the printed list.';
+  addClass(el, 'show');
+}
+
+window.onerror = function (message, source, line) {
+  showPageError(String(message) + (line ? ' (line ' + line + ')' : ''));
+  return false;
+};
+
+// ---------- data helpers ----------
 function filterList(filterKey) {
-  if (filterKey === 'verbs') return vocabDatabase.filter(i => i.type === 'verb');
-  if (filterKey === 'adjectives') return vocabDatabase.filter(i => i.type === 'adjective');
-  return [...vocabDatabase];
-}
-
-function fisherYatesShuffle(arr) {
-  const shuffled = [...arr];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  var out = [], i, want = filterKey === 'verbs' ? 'verb' : 'adjective';
+  for (i = 0; i < vocabDatabase.length; i++) {
+    if (filterKey === 'all' || vocabDatabase[i].type === want) out.push(vocabDatabase[i]);
   }
-  return shuffled;
+  return out;
 }
 
+function shuffleCopy(arr) {
+  var out = arr.slice(), i, j, tmp;
+  for (i = out.length - 1; i > 0; i--) {
+    j = Math.floor(Math.random() * (i + 1));
+    tmp = out[i]; out[i] = out[j]; out[j] = tmp;
+  }
+  return out;
+}
+
+function setGroupActive(groupId, activeIndex) {
+  var buttons = buttonList(groupId), i;
+  for (i = 0; i < buttons.length; i++) {
+    if (i === activeIndex) addClass(buttons[i], 'active');
+    else removeClass(buttons[i], 'active');
+  }
+}
+
+function updateShuffleBadge(isShuffled) {
+  setText(byId('shuffle-status'), isShuffled ? 'Order: shuffled' : 'Order: list order');
+}
+
+// ---------- modes & filters ----------
 function selectType(filterKey) {
   activeFilter = filterKey;
-  document.querySelectorAll('#filter-group button').forEach((b, idx) => {
-    b.classList.toggle('active', (idx === 0 && filterKey === 'verbs') || (idx === 1 && filterKey === 'adjectives') || (idx === 2 && filterKey === 'all'));
-  });
+  setGroupActive('filter-group', filterKey === 'verbs' ? 0 : (filterKey === 'adjectives' ? 1 : 2));
 
   displayList = filterList(activeFilter);
-  // Auto-shuffle if entering dictation or cloze
   if (currentMode === 'dictation' || currentMode === 'cloze') {
-    displayList = fisherYatesShuffle(displayList);
+    displayList = shuffleCopy(displayList);
     updateShuffleBadge(true);
   } else {
     updateShuffleBadge(false);
@@ -290,89 +353,92 @@ function selectType(filterKey) {
 
 function selectMode(modeKey) {
   currentMode = modeKey;
-  document.querySelectorAll('#mode-group button').forEach((b, idx) => {
-    b.classList.toggle('active', (idx === 0 && modeKey === 'flashcard') || (idx === 1 && modeKey === 'dictation') || (idx === 2 && modeKey === 'cloze'));
-  });
+  setGroupActive('mode-group', modeKey === 'flashcard' ? 0 : (modeKey === 'dictation' ? 1 : 2));
 
-  document.getElementById('flashcard-view').style.display = modeKey === 'flashcard' ? 'block' : 'none';
-  document.getElementById('dictation-view').style.display = modeKey === 'dictation' ? 'flex' : 'none';
-  document.getElementById('cloze-view').style.display = modeKey === 'cloze' ? 'flex' : 'none';
+  byId('flashcard-view').style.display = modeKey === 'flashcard' ? 'block' : 'none';
+  byId('dictation-view').style.display = modeKey === 'dictation' ? 'flex' : 'none';
+  byId('cloze-view').style.display = modeKey === 'cloze' ? 'flex' : 'none';
 
-  // Requirements: Dictation & Cloze questions must NOT follow list order
+  // Dictation & Cloze must never follow list order
   if (modeKey === 'dictation' || modeKey === 'cloze') {
-    displayList = fisherYatesShuffle(displayList);
+    displayList = shuffleCopy(displayList);
     updateShuffleBadge(true);
   }
-
   currentIndex = 0;
   refreshDisplay();
 }
 
 function shuffleActiveSet() {
-  displayList = fisherYatesShuffle(displayList);
+  displayList = shuffleCopy(displayList);
   currentIndex = 0;
   updateShuffleBadge(true);
   refreshDisplay();
 }
 
-function updateShuffleBadge(isShuffled) {
-  const badge = document.getElementById('shuffle-status');
-  badge.textContent = isShuffled ? 'Order: shuffled' : 'Order: list order';
-}
-
 function toggleCardFlip() {
-  document.getElementById('card-inner').classList.toggle('flipped');
+  var card = byId('card-inner');
+  if (!card) return;
+  if (hasClass(card, 'flipped')) removeClass(card, 'flipped');
+  else addClass(card, 'flipped');
 }
 
+// ---------- pronunciation ----------
 function currentSpokenWord() {
-  const item = displayList[currentIndex];
+  var item = displayList[currentIndex];
   if (!item) return '';
-  return item.word.replace('...', '').trim().replace(/\s+/g, ' ');
+  return item.word.replace('...', '').replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
 }
 
 function flashAudioButtons() {
-  document.querySelectorAll('.audio-btn').forEach((btn) => {
-    btn.classList.add('speaking');
-    setTimeout(() => btn.classList.remove('speaking'), 900);
-  });
+  var btns = document.getElementsByClassName ? document.getElementsByClassName('audio-btn') : [];
+  var i, el;
+  for (i = 0; i < btns.length; i++) {
+    el = btns[i];
+    addClass(el, 'speaking');
+    (function (target) { setTimeout(function () { removeClass(target, 'speaking'); }, 900); })(el);
+  }
 }
 
 function showSpeechHint(message) {
-  const el = document.getElementById('speech-hint');
+  var el = byId('speech-hint');
   if (!el) return;
-  el.textContent = message;
-  el.classList.add('show');
-  clearTimeout(showSpeechHint._t);
-  showSpeechHint._t = setTimeout(() => el.classList.remove('show'), 7000);
+  setText(el, message);
+  addClass(el, 'show');
+  if (showSpeechHint.timer) clearTimeout(showSpeechHint.timer);
+  showSpeechHint.timer = setTimeout(function () { removeClass(el, 'show'); }, 7000);
 }
 
-function pickEnglishVoice() {
-  if (!window.speechSynthesis || !window.speechSynthesis.getVoices) return null;
-  const voices = window.speechSynthesis.getVoices();
-  return voices.find(v => /^en[-_]?GB/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang)) || null;
+function pickEnglishVoice(synth) {
+  if (!synth || !synth.getVoices) return null;
+  var voices = synth.getVoices(), i;
+  for (i = 0; i < voices.length; i++) { if (/^en[-_]?GB/i.test(voices[i].lang)) return voices[i]; }
+  for (i = 0; i < voices.length; i++) { if (/^en/i.test(voices[i].lang)) return voices[i]; }
+  return null;
 }
 
 function speakCurrentWord(e) {
-  if (e) e.stopPropagation();
-  const word = currentSpokenWord();
+  if (e && e.stopPropagation) e.stopPropagation();
+  var word = currentSpokenWord();
   if (!word) return;
   flashAudioButtons();
-  if (!('speechSynthesis' in window) || !window.speechSynthesis) {
+  if (!('speechSynthesis' in window) || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
     showSpeechHint('🔇 Pronunciation is not available in this browser — read the word aloud and check your spelling.');
     return;
   }
-  const synth = window.speechSynthesis;
+  var synth = window.speechSynthesis;
   try {
     if (synth.speaking || synth.pending) synth.cancel();
-    const utterance = new SpeechSynthesisUtterance(word);
-    const voice = pickEnglishVoice();
+    var utterance = new SpeechSynthesisUtterance(word);
+    var voice = pickEnglishVoice(synth);
     if (voice) { utterance.voice = voice; utterance.lang = voice.lang; } else { utterance.lang = 'en-US'; }
     utterance.rate = 0.85;
-    utterance.onerror = () => showSpeechHint('🔇 This phone could not play the word. Check Settings → Accessibility → Text-to-Speech output, then try again.');
+    utterance.onerror = function () {
+      showSpeechHint('🔇 This phone could not play the word. Check Settings → Accessibility → Text-to-Speech output, then try again.');
+    };
     synth.speak(utterance);
-    setTimeout(() => {
+    setTimeout(function () {
       if (!synth.speaking && !synth.pending) {
-        showSpeechHint('🔇 No sound? Your phone may need an English Text-to-Speech voice (Settings → Accessibility → Text-to-Speech output), or turn the media volume up.');
+        showSpeechHint('🔇 No sound? Your phone may need an English Text-to-Speech voice (Settings → Accessibility → Text-to-Speech output), or the media volume is off.');
       }
     }, 900);
   } catch (err) {
@@ -380,98 +446,104 @@ function speakCurrentWord(e) {
   }
 }
 
+// ---------- rendering ----------
 function refreshDisplay() {
-  if (displayList.length === 0) return;
-  const item = displayList[currentIndex];
-  document.getElementById('item-counter').textContent = `${currentIndex + 1} / ${displayList.length}`;
+  if (!displayList.length) return;
+  var item = displayList[currentIndex];
+  setText(byId('item-counter'), (currentIndex + 1) + ' / ' + displayList.length);
 
-  // 1. Flashcard update
-  document.getElementById('card-inner').classList.remove('flipped');
-  document.getElementById('card-pos').textContent = item.pos;
-  document.getElementById('card-word').textContent = item.word;
-  document.getElementById('card-def-en').textContent = item.defEn;
-  document.getElementById('card-def-zh').textContent = item.defZh;
-  document.getElementById('card-example').textContent = item.sentence;
+  // 1. Flashcard
+  var card = byId('card-inner');
+  removeClass(card, 'flipped');
+  setText(byId('card-pos'), item.pos);
+  setText(byId('card-word'), item.word);
+  setText(byId('card-def-en'), item.defEn);
+  setText(byId('card-def-zh'), item.defZh);
+  setText(byId('card-example'), item.sentence);
 
-  // 2. Dictation update
-  document.getElementById('dictation-prompt').textContent = `${item.pos} ${item.defEn} — (${item.defZh})`;
-  document.getElementById('dictation-input').value = '';
-  document.getElementById('dictation-feedback').textContent = '';
+  // 2. Dictation
+  setText(byId('dictation-prompt'), item.pos + ' ' + item.defEn + ' — (' + item.defZh + ')');
+  byId('dictation-input').value = '';
+  removeClass(byId('dictation-feedback'), 'correct');
+  removeClass(byId('dictation-feedback'), 'wrong');
+  setText(byId('dictation-feedback'), '');
 
-  // 3. Cloze update
-  const regex = new RegExp(`\\b${item.blankWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-  const clozeSentence = item.sentence.replace(regex, '_______________');
-  document.getElementById('cloze-sentence').textContent = clozeSentence;
-  document.getElementById('cloze-input').value = '';
-  document.getElementById('cloze-feedback').textContent = '';
+  // 3. Cloze
+  var safeBlank = String(item.blankWord).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  var clozeSentence = item.sentence.replace(new RegExp('\\b' + safeBlank + '\\b', 'i'), '_______________');
+  setText(byId('cloze-sentence'), clozeSentence);
+  byId('cloze-input').value = '';
+  removeClass(byId('cloze-feedback'), 'correct');
+  removeClass(byId('cloze-feedback'), 'wrong');
+  setText(byId('cloze-feedback'), '');
 
   updateNavButtons();
 }
 
 function updateNavButtons() {
-  const prev = document.getElementById('prev-btn');
-  const next = document.getElementById('next-btn');
+  var prev = byId('prev-btn'), next = byId('next-btn');
   if (prev) prev.disabled = currentIndex === 0;
   if (next) next.disabled = currentIndex >= displayList.length - 1;
 }
 
+// ---------- answering ----------
 function verifyDictation() {
-  const input = document.getElementById('dictation-input').value.trim().toLowerCase();
-  const target = displayList[currentIndex].word.toLowerCase().replace('...', '').trim().replace(/\s+/g, ' ');
-  const feedback = document.getElementById('dictation-feedback');
+  var raw = byId('dictation-input').value;
+  var input = raw.replace(/^\s+|\s+$/g, '').toLowerCase();
+  var item = displayList[currentIndex];
+  var target = item.word.toLowerCase().replace('...', '').replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+  var feedback = byId('dictation-feedback');
+  var firstWord = target.split(' ')[0];
 
-  if (input === target || (target.includes(' ') && input === target.split(' ')[0])) {
-    feedback.textContent = `✓ Correct! "${displayList[currentIndex].word}" is spelled correctly.`;
-    feedback.className = 'feedback correct';
+  if (input === target || (target.indexOf(' ') !== -1 && input === firstWord)) {
+    removeClass(feedback, 'wrong'); addClass(feedback, 'correct');
+    setText(feedback, '✓ Correct! "' + item.word + '" is spelled correctly.');
   } else {
-    feedback.textContent = '✗ Incorrect spelling. Please try again or click Reveal.';
-    feedback.className = 'feedback wrong';
+    removeClass(feedback, 'correct'); addClass(feedback, 'wrong');
+    setText(feedback, '✗ Incorrect spelling. Please try again or click Reveal.');
   }
 }
 
 function revealDictationAnswer() {
-  const feedback = document.getElementById('dictation-feedback');
-  feedback.textContent = `Correct answer: ${displayList[currentIndex].word}`;
-  feedback.className = 'feedback';
+  var feedback = byId('dictation-feedback');
+  removeClass(feedback, 'correct'); removeClass(feedback, 'wrong');
+  setText(feedback, 'Correct answer: ' + displayList[currentIndex].word);
 }
 
 function verifyCloze() {
-  const input = document.getElementById('cloze-input').value.trim().toLowerCase();
-  const item = displayList[currentIndex];
-  const targetBase = item.word.toLowerCase().replace('...', '').trim().split(' ')[0];
-  const targetBlank = item.blankWord.toLowerCase();
-  const feedback = document.getElementById('cloze-feedback');
+  var input = byId('cloze-input').value.replace(/^\s+|\s+$/g, '').toLowerCase();
+  var item = displayList[currentIndex];
+  var targetBase = item.word.toLowerCase().replace('...', '').replace(/^\s+|\s+$/g, '').split(' ')[0];
+  var targetBlank = item.blankWord.toLowerCase();
+  var feedback = byId('cloze-feedback');
 
   if (input === targetBlank || input === targetBase) {
-    feedback.textContent = `✓ Excellent! In this context: "${item.blankWord}".`;
-    feedback.className = 'feedback correct';
+    removeClass(feedback, 'wrong'); addClass(feedback, 'correct');
+    setText(feedback, '✓ Excellent! In this context: "' + item.blankWord + '".');
   } else {
-    feedback.textContent = `✗ Not quite. Click Show Answer for a clue!`;
-    feedback.className = 'feedback wrong';
+    removeClass(feedback, 'correct'); addClass(feedback, 'wrong');
+    setText(feedback, '✗ Not quite. Click Show Answer for a clue!');
   }
 }
 
 function revealClozeAnswer() {
-  const item = displayList[currentIndex];
-  const feedback = document.getElementById('cloze-feedback');
-  feedback.textContent = `Answer: "${item.blankWord}" (Base form: ${item.word})`;
-  feedback.className = 'feedback';
+  var item = displayList[currentIndex];
+  var feedback = byId('cloze-feedback');
+  removeClass(feedback, 'correct'); removeClass(feedback, 'wrong');
+  setText(feedback, 'Answer: "' + item.blankWord + '" (Base form: ' + item.word + ')');
 }
 
 function navigate(direction) {
-  if (direction === 1 && currentIndex < displayList.length - 1) {
-    currentIndex++;
-    refreshDisplay();
-  } else if (direction === -1 && currentIndex > 0) {
-    currentIndex--;
-    refreshDisplay();
-  }
+  if (direction === 1 && currentIndex < displayList.length - 1) { currentIndex++; refreshDisplay(); }
+  else if (direction === -1 && currentIndex > 0) { currentIndex--; refreshDisplay(); }
 }
 
-// Keyboard shortcuts for convenience
-document.addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT') {
-    if (e.key === 'Enter') {
+// ---------- keyboard shortcuts (laptop / iPad with keyboard) ----------
+document.onkeydown = function (e) {
+  e = e || window.event;
+  var target = e.target || e.srcElement;
+  if (target && target.tagName === 'INPUT') {
+    if (e.key === 'Enter' || e.keyCode === 13) {
       if (currentMode === 'dictation') verifyDictation();
       if (currentMode === 'cloze') verifyCloze();
     }
@@ -479,29 +551,63 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'ArrowRight') navigate(1);
   if (e.key === 'ArrowLeft') navigate(-1);
-  if (e.key === ' ' && currentMode === 'flashcard') { e.preventDefault(); toggleCardFlip(); }
-});
+  if ((e.key === ' ' || e.keyCode === 32) && currentMode === 'flashcard') {
+    if (e.preventDefault) e.preventDefault();
+    toggleCardFlip();
+  }
+};
 
-// Tap feedback: Android shows no hover state, so pulse whichever tab was tapped
-document.querySelectorAll('#filter-group button, #mode-group button, .btn-shuffle').forEach((btn) => {
-  btn.addEventListener('click', function () {
-    this.classList.remove('tapped');
-    void this.offsetWidth; // restart the animation
-    this.classList.add('tapped');
-    setTimeout(() => this.classList.remove('tapped'), 450);
-  });
-});
+// ---------- tap feedback + keyboard-safe inputs ----------
+function bindTapFeedback() {
+  var ids = ['filter-group', 'mode-group'], i, j, buttons, btn;
+  for (i = 0; i < ids.length; i++) {
+    buttons = buttonList(ids[i]);
+    for (j = 0; j < buttons.length; j++) {
+      btn = buttons[j];
+      (function (el) {
+        el.onclick = function () {
+          removeClass(el, 'tapped');
+          void el.offsetWidth;
+          addClass(el, 'tapped');
+          setTimeout(function () { removeClass(el, 'tapped'); }, 450);
+        };
+      })(btn);
+    }
+  }
+}
 
-// Keep the input and its buttons above the on-screen keyboard
-['dictation-input', 'cloze-input'].forEach((id) => {
-  const el = document.getElementById(id);
-  if (!el || !el.addEventListener) return;
-  el.addEventListener('focus', () => setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 250));
-});
+function bindFocusScroll() {
+  var ids = ['dictation-input', 'cloze-input'], i, el;
+  for (i = 0; i < ids.length; i++) {
+    el = byId(ids[i]);
+    if (!el) continue;
+    (function (input) {
+      input.onfocus = function () {
+        setTimeout(function () {
+          try { input.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+          catch (err) { try { input.scrollIntoView(); } catch (e2) {} }
+        }, 250);
+      };
+    })(el);
+  }
+}
 
-// Initialize on load
-displayList = filterList('verbs');
-refreshDisplay();
+// ---------- start ----------
+(function init() {
+  try {
+    bindTapFeedback();
+    bindFocusScroll();
+    displayList = filterList('verbs');
+    refreshDisplay();
+    pageReady = true;
+  } catch (err) {
+    showPageError(String(err && err.message ? err.message : err));
+  }
+})();
+
+setTimeout(function () {
+  if (!pageReady) showPageError('the page script did not finish loading.');
+}, 1500);
 </script>
 </body>
 </html>
