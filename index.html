@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1e3a8a">
+  <title>F5 English Vocabulary Revision: Communication &amp; Technology</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-accent: #2563eb;
+      --success: #15803d;
+      --danger: #b91c1c;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --border: #cbd5e1;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      background-color: var(--bg); color: var(--text); margin: 0;
+      padding: clamp(12px, 4vw, 24px);
+      display: flex; justify-content: center;
+      min-height: 100vh;
+    }
+    .container { width: 100%; max-width: 820px; }
+    header { text-align: center; margin-bottom: clamp(14px, 4vw, 24px); }
+    h1 { color: var(--primary); font-size: clamp(1.3rem, 5.4vw, 1.8rem); line-height: 1.25; margin: 0 0 6px 0; }
+    p.subtitle { color: #64748b; font-size: clamp(0.82rem, 3.4vw, 0.95rem); margin: 0; line-height: 1.4; }
+
+    .panel { background: var(--card-bg); padding: clamp(14px, 4vw, 22px); border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.06); margin-bottom: 16px; }
+    .control-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; }
+    .btn-group { display: flex; gap: 6px; flex-wrap: wrap; flex: 1 1 auto; }
+    .btn-group button {
+      border: 1px solid var(--border); background: #ffffff; color: #475569; padding: 10px 14px;
+      border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;
+      min-height: 44px; touch-action: manipulation;
+    }
+    .btn-group button.active { background: var(--primary); color: #ffffff; border-color: var(--primary); }
+    .btn-shuffle {
+      background: #f1f5f9; border: 1px solid #94a3b8; color: #334155; padding: 10px 14px;
+      border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;
+      min-height: 44px; touch-action: manipulation;
+    }
+    .btn-shuffle:hover { background: #e2e8f0; }
+
+    /* Flashcard */
+    .card-container { perspective: 1000px; -webkit-perspective: 1000px; margin: 18px auto; max-width: 520px; height: 330px; cursor: pointer; }
+    @media (min-width: 700px) { .card-container { height: 300px; } }
+    .card-inner {
+      position: relative; width: 100%; height: 100%; text-align: center;
+      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      -webkit-transition: -webkit-transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+      -webkit-transform-style: preserve-3d;
+    }
+    .card-inner.flipped { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
+    .card-front, .card-back {
+      position: absolute; width: 100%; height: 100%;
+      -webkit-backface-visibility: hidden; backface-visibility: hidden;
+      border-radius: 16px; display: flex; flex-direction: column; justify-content: center;
+      align-items: center; padding: clamp(16px, 4.5vw, 24px); box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      border: 1px solid var(--border); overflow: hidden;
+    }
+    .card-front { background: #ffffff; }
+    .card-back { background: #f8fafc; transform: rotateY(180deg); -webkit-transform: rotateY(180deg); text-align: left; align-items: flex-start; justify-content: space-between; }
+    .card-word { font-size: clamp(1.5rem, 7vw, 2.2rem); font-weight: 700; color: var(--primary); margin: 8px 0; overflow-wrap: anywhere; }
+    .card-pos { font-size: 1rem; font-style: italic; color: #64748b; }
+    .card-def-en { font-size: clamp(0.98rem, 3.8vw, 1.05rem); font-weight: 600; color: #1e293b; margin-bottom: 4px; }
+    .card-def-zh { font-size: clamp(1rem, 4vw, 1.1rem); color: #0d9488; font-weight: 700; margin-bottom: 12px; }
+    .card-example { font-size: clamp(0.88rem, 3.5vw, 0.95rem); color: #334155; line-height: 1.5; border-top: 1px dashed var(--border); padding-top: 12px; width: 100%; overflow-wrap: break-word; }
+
+    /* Interactive Practice */
+    .practice-box { text-align: center; padding: 20px 4px; min-height: 240px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .prompt-text { font-size: clamp(1.05rem, 4.4vw, 1.2rem); font-weight: 600; margin-bottom: 18px; color: #0f172a; max-width: 650px; line-height: 1.5; }
+    .input-row { display: flex; gap: 8px; justify-content: center; width: 100%; max-width: 480px; margin-bottom: 12px; flex-wrap: wrap; }
+    input[type="text"] {
+      flex: 1 1 220px; padding: 12px 14px; font-size: 1.05rem; border: 2px solid var(--border);
+      border-radius: 8px; outline: none; transition: border-color 0.2s; min-width: 0;
+    }
+    input[type="text"]:focus { border-color: var(--primary-accent); }
+    .btn-action { background: var(--primary); color: #fff; border: none; padding: 12px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; min-height: 44px; touch-action: manipulation; }
+    .btn-secondary { background: #e2e8f0; color: #334155; border: none; padding: 12px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; min-height: 44px; touch-action: manipulation; }
+    @media (max-width: 560px) {
+      .input-row { flex-direction: column; gap: 10px; }
+      .input-row input[type="text"], .input-row button { width: 100%; flex: none; }
+    }
+    .feedback { font-size: 1rem; font-weight: 600; min-height: 26px; line-height: 1.45; }
+
+    .feedback.correct { color: var(--success); }
+    .feedback.wrong { color: var(--danger); }
+
+    /* Navigation Bar */
+    .nav-row { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 14px; gap: 8px; }
+    .nav-btn { background: transparent; border: none; color: var(--primary); font-weight: 700; cursor: pointer; font-size: 1rem; padding: 10px 6px; min-height: 44px; touch-action: manipulation; }
+    .nav-btn:disabled { color: #94a3b8; cursor: default; }
+    .counter { font-size: 0.95rem; color: #64748b; font-weight: 600; white-space: nowrap; }
+    .audio-btn {
+      background: #eff6ff; border: 1px solid #bfdbfe; color: var(--primary-accent);
+      border-radius: 50%; width: 44px; height: 44px; display: inline-flex;
+      align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem;
+      flex: 0 0 auto; touch-action: manipulation;
+    }
+    .badge { font-size: 0.75rem; background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>F5 Vocabulary Revision System</h1>
+    <p class="subtitle">Unit 6: Communication &amp; Technology (Argumentative &amp; Proposal Writing)</p>
+  </header>
+
+  <div class="panel">
+    <div class="control-row">
+      <div class="btn-group" id="filter-group">
+        <button class="active" onclick="selectType('verbs')">Formal Verbs (25)</button>
+        <button onclick="selectType('adjectives')">Formal Adjectives (15)</button>
+        <button onclick="selectType('all')">All Words (40)</button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-shuffle" onclick="shuffleActiveSet()" title="Shuffle words in current mode">🔀 Shuffle Order</button>
+      </div>
+    </div>
+    <div class="control-row" style="margin-top: 14px;">
+      <div class="btn-group" id="mode-group">
+        <button class="active" onclick="selectMode('flashcard')">Flashcards</button>
+        <button onclick="selectMode('dictation')">Dictation Practice</button>
+        <button onclick="selectMode('cloze')">Cloze Practice</button>
+      </div>
+      <span id="shuffle-status" class="badge">Default Order</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <!-- 1. Flashcard Mode -->
+    <div id="flashcard-view">
+      <div class="card-container" onclick="toggleCardFlip()">
+        <div class="card-inner" id="card-inner">
+          <div class="card-front">
+            <span class="card-pos" id="card-pos">(v)</span>
+            <div class="card-word" id="card-word">proliferate</div>
+            <button class="audio-btn" onclick="speakCurrentWord(event)" title="Listen to pronunciation" aria-label="Listen to pronunciation">🔊</button>
+            <p style="color:#94a3b8; font-size:0.85rem; margin-top: 16px;">(Click anywhere on card to flip)</p>
+          </div>
+          <div class="card-back">
+            <div>
+              <div class="card-def-en" id="card-def-en">to spread rapidly and in large numbers.</div>
+              <div class="card-def-zh" id="card-def-zh">激增 / 擴散</div>
+            </div>
+            <div class="card-example" id="card-example">Example sentence loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Dictation Mode -->
+    <div id="dictation-view" class="practice-box" style="display:none;">
+      <div class="prompt-text" id="dictation-prompt">Definition loading...</div>
+      <button class="audio-btn" onclick="speakCurrentWord(event)" title="Listen to pronunciation" aria-label="Listen to pronunciation" style="margin-bottom:14px;">🔊 Pronounce</button>
+      <div class="input-row">
+        <input type="text" id="dictation-input" placeholder="Type the formal word..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text">
+        <button class="btn-action" onclick="verifyDictation()">Check</button>
+        <button class="btn-secondary" onclick="revealDictationAnswer()">Reveal</button>
+      </div>
+      <div class="feedback" id="dictation-feedback"></div>
+    </div>
+
+    <!-- 3. Cloze Mode -->
+    <div id="cloze-view" class="practice-box" style="display:none;">
+      <div class="prompt-text" id="cloze-sentence">Sentence loading...</div>
+      <div class="input-row">
+        <input type="text" id="cloze-input" placeholder="Fill in the blank word..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text">
+        <button class="btn-action" onclick="verifyCloze()">Check</button>
+        <button class="btn-secondary" onclick="revealClozeAnswer()">Show Answer</button>
+      </div>
+      <div class="feedback" id="cloze-feedback"></div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-row">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">← Previous</button>
+      <span class="counter" id="item-counter">1 / 25</span>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Audited Database of all 40 Items (25 Verbs + 15 Adjectives)
+const vocabDatabase = [
+  // PART A: 25 FORMAL VERBS
+  { word: "proliferate", pos: "(v)", type: "verb", blankWord: "proliferated", defEn: "to spread rapidly and in large numbers.", defZh: "激增 / 擴散", sentence: "Misinformation has proliferated on social media because anyone can post without verification." },
+  { word: "exacerbate", pos: "(v)", type: "verb", blankWord: "exacerbate", defEn: "to make a bad situation, feeling or problem worse.", defZh: "惡化 / 加劇", sentence: "Constant phone notifications exacerbate students' difficulty in concentrating on their reading." },
+  { word: "compound", pos: "(v)", type: "verb", blankWord: "compound", defEn: "to make a problem worse by adding a further problem to it.", defZh: "使加重 / 使惡化", sentence: "Long screen hours compound the sleeping problems that many teenagers already have." },
+  { word: "mitigate", pos: "(v)", type: "verb", blankWord: "mitigate", defEn: "to make something harmful less serious or severe.", defZh: "減輕 / 緩和", sentence: "Schools can mitigate the risks of cyberbullying by teaching students how to report abusive messages." },
+  { word: "curb", pos: "(v)", type: "verb", blankWord: "curb", defEn: "to control or limit something harmful.", defZh: "控制 / 限制", sentence: "Some parents curb their children's screen time by locking the phone after nine o'clock." },
+  { word: "impede", pos: "(v)", type: "verb", blankWord: "impedes", defEn: "to slow down or block progress.", defZh: "阻礙 / 妨礙", sentence: "Weak Wi-Fi in the classroom impedes e-learning instead of promoting it." },
+  { word: "stifle", pos: "(v)", type: "verb", blankWord: "stifle", defEn: "to prevent something from growing or developing.", defZh: "扼殺 / 抑制", sentence: "Reading only short posts online may stifle students' ability to follow a long argument." },
+  { word: "erode", pos: "(v)", type: "verb", blankWord: "erode", defEn: "to weaken or destroy something gradually over time.", defZh: "侵蝕 / 削弱", sentence: "Face-to-face communication skills erode when families talk only through screens." },
+  { word: "undermine", pos: "(v)", type: "verb", blankWord: "undermines", defEn: "to weaken something gradually, often without anyone noticing.", defZh: "暗中破壞 / 逐漸削弱", sentence: "Forwarding unverified news undermines the public's trust in the media." },
+  { word: "jeopardise", pos: "(v)", type: "verb", blankWord: "jeopardises", defEn: "to put something at risk of harm or failure.", defZh: "危及 / 危害", sentence: "Sharing classmates' photos without asking jeopardises their privacy and can damage friendships." },
+  { word: "perpetuate", pos: "(v)", type: "verb", blankWord: "perpetuates", defEn: "to make something, usually a problem or belief, continue.", defZh: "使持續 / 使長存", sentence: "The algorithm perpetuates stereotypes because it keeps showing users what they already believe." },
+  { word: "disseminate", pos: "(v)", type: "verb", blankWord: "disseminates", defEn: "to spread information, ideas or news widely.", defZh: "散佈 / 傳播", sentence: "The school disseminates exam notices through the eClass app and the school website." },
+  { word: "distort", pos: "(v)", type: "verb", blankWord: "distort", defEn: "to change information so that it is no longer accurate or fair.", defZh: "扭曲 / 曲解", sentence: "Edited video clips distort what the speaker actually said." },
+  { word: "incentivise", pos: "(v)", type: "verb", blankWord: "incentivises", defEn: "to encourage people to do something by offering a reward.", defZh: "激勵 / 鼓勵", sentence: "The scheme incentivises reading by giving students points for every book they finish." },
+  { word: "amplify", pos: "(v)", type: "verb", blankWord: "amplify", defEn: "to make something stronger, louder or more widely heard.", defZh: "放大 / 增強", sentence: "A single post can amplify a rumour to thousands of readers within minutes." },
+  { word: "bolster", pos: "(v)", type: "verb", blankWord: "bolster", defEn: "to strengthen or support something.", defZh: "支持 / 鞏固", sentence: "Peer comments on the class blog bolster students' confidence in writing." },
+  { word: "foster", pos: "(v)", type: "verb", blankWord: "foster", defEn: "to encourage the development or growth of ideas or feelings.", defZh: "培養 / 促進", sentence: "Schools should foster a culture of critical thinking to help students navigate digital information." },
+  { word: "cultivate", pos: "(v)", type: "verb", blankWord: "cultivate", defEn: "to try to develop and improve something.", defZh: "培養 / 陶冶", sentence: "Reading extensively helps cultivate a sophisticated understanding of complex social issues." },
+  { word: "facilitate", pos: "(v)", type: "verb", blankWord: "facilitate", defEn: "to make an action or a process possible or easier.", defZh: "促進 / 幫助", sentence: "Advanced software can facilitate collaboration among students working on remote group projects." },
+  { word: "equip ... with", pos: "(phr v)", type: "verb", blankWord: "equip", defEn: "to provide a person or place with the things needed for a particular purpose.", defZh: "裝備 / 配備", sentence: "The new curriculum aims to equip teenagers with the digital literacy required in the modern workplace." },
+  { word: "stimulate", pos: "(v)", type: "verb", blankWord: "stimulate", defEn: "to encourage something to grow, develop, or become active.", defZh: "刺激 / 激發", sentence: "Interactive learning platforms can stimulate students' interest in acquiring new technological skills." },
+  { word: "nurture", pos: "(v)", type: "verb", blankWord: "nurture", defEn: "to help a plan or person to develop and be successful.", defZh: "培育 / 滋養", sentence: "Educators must nurture young talents by providing adequate resources and guidance in coding." },
+  { word: "spark", pos: "(v)", type: "verb", blankWord: "sparked", defEn: "to cause the start of something, especially an argument or debate.", defZh: "引發 / 激發", sentence: "The documentary on artificial intelligence sparked a heated debate regarding its ethical implications." },
+  { word: "maximize", pos: "(v)", type: "verb", blankWord: "maximize", defEn: "to increase something as much as possible.", defZh: "最大化", sentence: "Students should maximize their learning potential by utilizing various online educational resources." },
+  { word: "grant", pos: "(v)", type: "verb", blankWord: "granted", defEn: "to give or allow someone something, usually in an official way.", defZh: "授予 / 給予", sentence: "The administration granted the student council permission to establish a school-wide technology forum." },
+
+  // PART B: 15 FORMAL ADJECTIVES
+  { word: "ubiquitous", pos: "(adj)", type: "adjective", blankWord: "ubiquitous", defEn: "found everywhere; extremely common.", defZh: "無處不在的 / 普及的", sentence: "Smartphones are now ubiquitous, even in the school canteen queue." },
+  { word: "prevalent", pos: "(adj)", type: "adjective", blankWord: "prevalent", defEn: "existing very commonly or happening often.", defZh: "普遍的 / 盛行的", sentence: "Cyberbullying has become a prevalent issue that requires immediate intervention from school authorities." },
+  { word: "detrimental", pos: "(adj)", type: "adjective", blankWord: "detrimental", defEn: "causing harm or damage (to something).", defZh: "有害的 / 不利的", sentence: "Late-night gaming is detrimental to both sleep quality and concentration in class." },
+  { word: "indispensable", pos: "(adj)", type: "adjective", blankWord: "indispensable", defEn: "so important that you cannot do without it.", defZh: "不可或缺的", sentence: "Reliable internet access has become indispensable to education." },
+  { word: "unprecedented", pos: "(adj)", type: "adjective", blankWord: "unprecedented", defEn: "never having happened before.", defZh: "史無前例的 / 空前的", sentence: "The pandemic forced schools into an unprecedented experiment in online learning." },
+  { word: "intrusive", pos: "(adj)", type: "adjective", blankWord: "intrusive", defEn: "entering someone's private life in an unwanted way.", defZh: "侵入性的 / 打擾的", sentence: "Advertising that follows your browsing history feels intrusive." },
+  { word: "short-lived", pos: "(adj)", type: "adjective", blankWord: "short-lived", defEn: "lasting for only a short period.", defZh: "短暫的", sentence: "The enthusiasm for the new learning application was unfortunately short-lived." },
+  { word: "superficial", pos: "(adj)", type: "adjective", blankWord: "superficial", defEn: "only on the surface; not deep or careful.", defZh: "表面的 / 膚淺的", sentence: "Friendships that exist only in a group chat often stay superficial." },
+  { word: "fragmented", pos: "(adj)", type: "adjective", blankWord: "fragmented", defEn: "broken into separate, unconnected parts.", defZh: "碎片的 / 支離破碎的", sentence: "Fragmented attention — a message, a like, a video — makes deep reading almost impossible." },
+  { word: "unsustainable", pos: "(adj)", type: "adjective", blankWord: "unsustainable", defEn: "unable to continue at the present level or in the present way.", defZh: "不可持續的", sentence: "Checking the phone every five minutes is an unsustainable study habit." },
+  { word: "mutual", pos: "(adj)", type: "adjective", blankWord: "mutual", defEn: "feeling the same emotion, or doing the same thing to or for each other.", defZh: "相互的 / 共同的", sentence: "Effective communication requires mutual respect between teachers and students." },
+  { word: "conducive", pos: "(adj)", type: "adjective", blankWord: "conducive", defEn: "making a particular result likely (usually a good one).", defZh: "有助於...的", sentence: "A silent, phone-free room is conducive to concentrated reading." },
+  { word: "counterproductive", pos: "(adj)", type: "adjective", blankWord: "counterproductive", defEn: "producing the opposite of the result you want.", defZh: "適得其反的", sentence: "Banning phones outright may be counterproductive if students simply hide them." },
+  { word: "tangible", pos: "(adj)", type: "adjective", blankWord: "tangible", defEn: "real and clear enough to be seen or measured.", defZh: "有形的 / 實質的", sentence: "After one term the app brought tangible benefits: reading time rose by thirty minutes a week." },
+  { word: "feasible", pos: "(adj)", type: "adjective", blankWord: "feasible", defEn: "possible to do and likely to be successful.", defZh: "可行的", sentence: "Implementing a strict device policy is a feasible solution to minimize classroom distractions." }
+];
+
+let activeFilter = 'verbs';
+let currentMode = 'flashcard';
+let displayList = [];
+let currentIndex = 0;
+
+function filterList(filterKey) {
+  if (filterKey === 'verbs') return vocabDatabase.filter(i => i.type === 'verb');
+  if (filterKey === 'adjectives') return vocabDatabase.filter(i => i.type === 'adjective');
+  return [...vocabDatabase];
+}
+
+function fisherYatesShuffle(arr) {
+  const shuffled = [...arr];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function selectType(filterKey) {
+  activeFilter = filterKey;
+  document.querySelectorAll('#filter-group button').forEach((b, idx) => {
+    b.classList.toggle('active', (idx === 0 && filterKey === 'verbs') || (idx === 1 && filterKey === 'adjectives') || (idx === 2 && filterKey === 'all'));
+  });
+
+  displayList = filterList(activeFilter);
+  // Auto-shuffle if entering dictation or cloze
+  if (currentMode === 'dictation' || currentMode === 'cloze') {
+    displayList = fisherYatesShuffle(displayList);
+    updateShuffleBadge(true);
+  } else {
+    updateShuffleBadge(false);
+  }
+  currentIndex = 0;
+  refreshDisplay();
+}
+
+function selectMode(modeKey) {
+  currentMode = modeKey;
+  document.querySelectorAll('#mode-group button').forEach((b, idx) => {
+    b.classList.toggle('active', (idx === 0 && modeKey === 'flashcard') || (idx === 1 && modeKey === 'dictation') || (idx === 2 && modeKey === 'cloze'));
+  });
+
+  document.getElementById('flashcard-view').style.display = modeKey === 'flashcard' ? 'block' : 'none';
+  document.getElementById('dictation-view').style.display = modeKey === 'dictation' ? 'flex' : 'none';
+  document.getElementById('cloze-view').style.display = modeKey === 'cloze' ? 'flex' : 'none';
+
+  // Requirements: Dictation & Cloze questions must NOT follow list order
+  if (modeKey === 'dictation' || modeKey === 'cloze') {
+    displayList = fisherYatesShuffle(displayList);
+    updateShuffleBadge(true);
+  }
+
+  currentIndex = 0;
+  refreshDisplay();
+}
+
+function shuffleActiveSet() {
+  displayList = fisherYatesShuffle(displayList);
+  currentIndex = 0;
+  updateShuffleBadge(true);
+  refreshDisplay();
+}
+
+function updateShuffleBadge(isShuffled) {
+  const badge = document.getElementById('shuffle-status');
+  if (isShuffled) {
+    badge.textContent = '🔀 Shuffled Order';
+    badge.style.background = '#dcfce7';
+    badge.style.color = '#15803d';
+  } else {
+    badge.textContent = 'Default Order';
+    badge.style.background = '#e0f2fe';
+    badge.style.color = '#0369a1';
+  }
+}
+
+function toggleCardFlip() {
+  document.getElementById('card-inner').classList.toggle('flipped');
+}
+
+function speakCurrentWord(e) {
+  if (e) e.stopPropagation();
+  if (!('speechSynthesis' in window)) return;
+  const currentItem = displayList[currentIndex];
+  if (!currentItem) return;
+  const cleanWord = currentItem.word.replace('...', '').trim().replace(/\s+/g, ' ');
+  const utterance = new SpeechSynthesisUtterance(cleanWord);
+  utterance.lang = 'en-US';
+  utterance.rate = 0.85;
+  try {
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  } catch (err) { /* speech unsupported */ }
+}
+
+function refreshDisplay() {
+  if (displayList.length === 0) return;
+  const item = displayList[currentIndex];
+  document.getElementById('item-counter').textContent = `${currentIndex + 1} / ${displayList.length}`;
+
+  // 1. Flashcard update
+  document.getElementById('card-inner').classList.remove('flipped');
+  document.getElementById('card-pos').textContent = item.pos;
+  document.getElementById('card-word').textContent = item.word;
+  document.getElementById('card-def-en').textContent = item.defEn;
+  document.getElementById('card-def-zh').textContent = item.defZh;
+  document.getElementById('card-example').textContent = item.sentence;
+
+  // 2. Dictation update
+  document.getElementById('dictation-prompt').textContent = `${item.pos} ${item.defEn} — (${item.defZh})`;
+  document.getElementById('dictation-input').value = '';
+  document.getElementById('dictation-feedback').textContent = '';
+
+  // 3. Cloze update
+  const regex = new RegExp(`\\b${item.blankWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+  const clozeSentence = item.sentence.replace(regex, '_______________');
+  document.getElementById('cloze-sentence').textContent = clozeSentence;
+  document.getElementById('cloze-input').value = '';
+  document.getElementById('cloze-feedback').textContent = '';
+
+  updateNavButtons();
+}
+
+function updateNavButtons() {
+  const prev = document.getElementById('prev-btn');
+  const next = document.getElementById('next-btn');
+  if (prev) prev.disabled = currentIndex === 0;
+  if (next) next.disabled = currentIndex >= displayList.length - 1;
+}
+
+function verifyDictation() {
+  const input = document.getElementById('dictation-input').value.trim().toLowerCase();
+  const target = displayList[currentIndex].word.toLowerCase().replace('...', '').trim().replace(/\s+/g, ' ');
+  const feedback = document.getElementById('dictation-feedback');
+
+  if (input === target || (target.includes(' ') && input === target.split(' ')[0])) {
+    feedback.textContent = `✓ Correct! "${displayList[currentIndex].word}" is spelled correctly.`;
+    feedback.className = 'feedback correct';
+  } else {
+    feedback.textContent = '✗ Incorrect spelling. Please try again or click Reveal.';
+    feedback.className = 'feedback wrong';
+  }
+}
+
+function revealDictationAnswer() {
+  const feedback = document.getElementById('dictation-feedback');
+  feedback.textContent = `Correct answer: ${displayList[currentIndex].word}`;
+  feedback.className = 'feedback';
+}
+
+function verifyCloze() {
+  const input = document.getElementById('cloze-input').value.trim().toLowerCase();
+  const item = displayList[currentIndex];
+  const targetBase = item.word.toLowerCase().replace('...', '').trim().split(' ')[0];
+  const targetBlank = item.blankWord.toLowerCase();
+  const feedback = document.getElementById('cloze-feedback');
+
+  if (input === targetBlank || input === targetBase) {
+    feedback.textContent = `✓ Excellent! In this context: "${item.blankWord}".`;
+    feedback.className = 'feedback correct';
+  } else {
+    feedback.textContent = `✗ Not quite. Click Show Answer for a clue!`;
+    feedback.className = 'feedback wrong';
+  }
+}
+
+function revealClozeAnswer() {
+  const item = displayList[currentIndex];
+  const feedback = document.getElementById('cloze-feedback');
+  feedback.textContent = `Answer: "${item.blankWord}" (Base form: ${item.word})`;
+  feedback.className = 'feedback';
+}
+
+function navigate(direction) {
+  if (direction === 1 && currentIndex < displayList.length - 1) {
+    currentIndex++;
+    refreshDisplay();
+  } else if (direction === -1 && currentIndex > 0) {
+    currentIndex--;
+    refreshDisplay();
+  }
+}
+
+// Keyboard shortcuts for convenience
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') {
+    if (e.key === 'Enter') {
+      if (currentMode === 'dictation') verifyDictation();
+      if (currentMode === 'cloze') verifyCloze();
+    }
+    return;
+  }
+  if (e.key === 'ArrowRight') navigate(1);
+  if (e.key === 'ArrowLeft') navigate(-1);
+  if (e.key === ' ' && currentMode === 'flashcard') { e.preventDefault(); toggleCardFlip(); }
+});
+
+// Initialize on load
+displayList = filterList('verbs');
+refreshDisplay();
+</script>
+</body>
+</html>
