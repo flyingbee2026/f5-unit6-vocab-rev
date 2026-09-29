@@ -16,7 +16,8 @@
       --text: #0f172a;
       --border: #cbd5e1;
     }
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        touch-action: manipulation; -webkit-tap-highlight-color: rgba(37,99,235,0.15); }
     html { -webkit-text-size-adjust: 100%; }
     body {
       background-color: var(--bg); color: var(--text); margin: 0;
@@ -43,7 +44,15 @@
       border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;
       min-height: 44px; touch-action: manipulation;
     }
-    .btn-shuffle:hover { background: #e2e8f0; }
+    .btn-shuffle:active { background: #e2e8f0; }
+
+    /* Visible response to every tap (Android gives no hover feedback) */
+    .btn-group button:active, .btn-shuffle:active, .btn-action:active, .btn-secondary:active,
+    .nav-btn:not(:disabled):active, .audio-btn:active { transform: scale(0.96); }
+    .card-container:active .card-front, .card-container:active .card-back { box-shadow: 0 3px 10px rgba(0,0,0,0.16); }
+    @keyframes tapPulse { 0% { box-shadow: 0 0 0 0 rgba(37,99,235,0.45); } 100% { box-shadow: 0 0 0 12px rgba(37,99,235,0); } }
+    .btn-group button.tapped { animation: tapPulse 0.4s ease-out; }
+    .audio-btn.speaking { background: #dbeafe; }
 
     /* Flashcard */
     .card-container { perspective: 1000px; -webkit-perspective: 1000px; margin: 18px auto; max-width: 520px; height: 330px; cursor: pointer; }
@@ -94,7 +103,7 @@
     /* Navigation Bar */
     .nav-row { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 14px; gap: 8px; }
     .nav-btn { background: transparent; border: none; color: var(--primary); font-weight: 700; cursor: pointer; font-size: 1rem; padding: 10px 6px; min-height: 44px; touch-action: manipulation; }
-    .nav-btn:disabled { color: #94a3b8; cursor: default; }
+    .nav-btn:disabled { color: #cbd5e1; opacity: 0.55; cursor: not-allowed; }
     .counter { font-size: 0.95rem; color: #64748b; font-weight: 600; white-space: nowrap; }
     .audio-btn {
       background: #eff6ff; border: 1px solid #bfdbfe; color: var(--primary-accent);
@@ -102,7 +111,10 @@
       align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem;
       flex: 0 0 auto; touch-action: manipulation;
     }
-    .badge { font-size: 0.75rem; background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
+    .order-status { font-size: 0.8rem; color: #64748b; font-weight: 600; pointer-events: none; white-space: nowrap; }
+    .speech-hint { font-size: 0.85rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a;
+      border-radius: 8px; padding: 8px 10px; margin-top: 10px; text-align: center; display: none; }
+    .speech-hint.show { display: block; }
   </style>
 </head>
 <body>
@@ -130,7 +142,7 @@
         <button onclick="selectMode('dictation')">Dictation Practice</button>
         <button onclick="selectMode('cloze')">Cloze Practice</button>
       </div>
-      <span id="shuffle-status" class="badge">Default Order</span>
+      <span id="shuffle-status" class="order-status">Order: list order</span>
     </div>
   </div>
 
@@ -178,6 +190,8 @@
       </div>
       <div class="feedback" id="cloze-feedback"></div>
     </div>
+
+    <div id="speech-hint" class="speech-hint" role="status" aria-live="polite"></div>
 
     <!-- Navigation -->
     <div class="nav-row">
@@ -303,34 +317,67 @@ function shuffleActiveSet() {
 
 function updateShuffleBadge(isShuffled) {
   const badge = document.getElementById('shuffle-status');
-  if (isShuffled) {
-    badge.textContent = '🔀 Shuffled Order';
-    badge.style.background = '#dcfce7';
-    badge.style.color = '#15803d';
-  } else {
-    badge.textContent = 'Default Order';
-    badge.style.background = '#e0f2fe';
-    badge.style.color = '#0369a1';
-  }
+  badge.textContent = isShuffled ? 'Order: shuffled' : 'Order: list order';
 }
 
 function toggleCardFlip() {
   document.getElementById('card-inner').classList.toggle('flipped');
 }
 
+function currentSpokenWord() {
+  const item = displayList[currentIndex];
+  if (!item) return '';
+  return item.word.replace('...', '').trim().replace(/\s+/g, ' ');
+}
+
+function flashAudioButtons() {
+  document.querySelectorAll('.audio-btn').forEach((btn) => {
+    btn.classList.add('speaking');
+    setTimeout(() => btn.classList.remove('speaking'), 900);
+  });
+}
+
+function showSpeechHint(message) {
+  const el = document.getElementById('speech-hint');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(showSpeechHint._t);
+  showSpeechHint._t = setTimeout(() => el.classList.remove('show'), 7000);
+}
+
+function pickEnglishVoice() {
+  if (!window.speechSynthesis || !window.speechSynthesis.getVoices) return null;
+  const voices = window.speechSynthesis.getVoices();
+  return voices.find(v => /^en[-_]?GB/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang)) || null;
+}
+
 function speakCurrentWord(e) {
   if (e) e.stopPropagation();
-  if (!('speechSynthesis' in window)) return;
-  const currentItem = displayList[currentIndex];
-  if (!currentItem) return;
-  const cleanWord = currentItem.word.replace('...', '').trim().replace(/\s+/g, ' ');
-  const utterance = new SpeechSynthesisUtterance(cleanWord);
-  utterance.lang = 'en-US';
-  utterance.rate = 0.85;
+  const word = currentSpokenWord();
+  if (!word) return;
+  flashAudioButtons();
+  if (!('speechSynthesis' in window) || !window.speechSynthesis) {
+    showSpeechHint('🔇 Pronunciation is not available in this browser — read the word aloud and check your spelling.');
+    return;
+  }
+  const synth = window.speechSynthesis;
   try {
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-  } catch (err) { /* speech unsupported */ }
+    if (synth.speaking || synth.pending) synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(word);
+    const voice = pickEnglishVoice();
+    if (voice) { utterance.voice = voice; utterance.lang = voice.lang; } else { utterance.lang = 'en-US'; }
+    utterance.rate = 0.85;
+    utterance.onerror = () => showSpeechHint('🔇 This phone could not play the word. Check Settings → Accessibility → Text-to-Speech output, then try again.');
+    synth.speak(utterance);
+    setTimeout(() => {
+      if (!synth.speaking && !synth.pending) {
+        showSpeechHint('🔇 No sound? Your phone may need an English Text-to-Speech voice (Settings → Accessibility → Text-to-Speech output), or turn the media volume up.');
+      }
+    }, 900);
+  } catch (err) {
+    showSpeechHint('🔇 Pronunciation is not available in this browser — read the word aloud and check your spelling.');
+  }
 }
 
 function refreshDisplay() {
@@ -433,6 +480,23 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') navigate(1);
   if (e.key === 'ArrowLeft') navigate(-1);
   if (e.key === ' ' && currentMode === 'flashcard') { e.preventDefault(); toggleCardFlip(); }
+});
+
+// Tap feedback: Android shows no hover state, so pulse whichever tab was tapped
+document.querySelectorAll('#filter-group button, #mode-group button, .btn-shuffle').forEach((btn) => {
+  btn.addEventListener('click', function () {
+    this.classList.remove('tapped');
+    void this.offsetWidth; // restart the animation
+    this.classList.add('tapped');
+    setTimeout(() => this.classList.remove('tapped'), 450);
+  });
+});
+
+// Keep the input and its buttons above the on-screen keyboard
+['dictation-input', 'cloze-input'].forEach((id) => {
+  const el = document.getElementById(id);
+  if (!el || !el.addEventListener) return;
+  el.addEventListener('focus', () => setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 250));
 });
 
 // Initialize on load
