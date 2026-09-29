@@ -121,6 +121,32 @@
       border-radius: 8px; padding: 8px 10px; margin-top: 10px; text-align: center; display: none; }
     .speech-hint.show { display: block; }
   </style>
+  <script>
+  // Tiny ES3-safe diagnostic: runs before everything else, so even a syntax error
+  // in the main script (old browser engines) produces a visible message.
+  window.onerror = function (message, source, line) {
+    try {
+      var el = document.getElementById('js-error');
+      if (!el) return false;
+      el.innerHTML = '⚠️ This page hit a problem on your phone: ' + String(message) +
+        (line ? ' (line ' + line + ')' : '') +
+        '<br>Please send this message to Ms Chau — the printed word list still works.';
+      el.className = 'js-error show';
+    } catch (e) {}
+    return false;
+  };
+  setTimeout(function () {
+    try {
+      if (!window.__pageReady) {
+        var el = document.getElementById('js-error');
+        if (!el) return;
+        el.innerHTML = '⚠️ The practice script did not start on this device. Please open the link in Chrome or Safari ' +
+          '(if you are inside another app, tap ⋮ and choose “Open in browser”), then reload the page.';
+        el.className = 'js-error show';
+      }
+    } catch (e) {}
+  }, 2500);
+  </script>
 </head>
 <body>
 
@@ -602,14 +628,11 @@ function bindFocusScroll() {
     displayList = filterList('verbs');
     refreshDisplay();
     pageReady = true;
+    window.__pageReady = true;
   } catch (err) {
     showPageError(String(err && err.message ? err.message : err));
   }
 })();
-
-setTimeout(function () {
-  if (!pageReady) showPageError('the page script did not finish loading.');
-}, 1500);
 </script>
 </body>
 </html>
